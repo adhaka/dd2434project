@@ -31,10 +31,11 @@ def main():
     print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
 
     # Plot Points
-    pos_examples = np.array([ data[0:2] for data in data_test if int(data[2]) == 0])
-    neg_examples = np.array([ data[0:2] for data in data_test if int(data[2]) == 1])
+    pos_examples = np.array([ data[0:2] for data in data_train if int(data[2]) == 0])
+    neg_examples = np.array([ data[0:2] for data in data_train if int(data[2]) == 1])
     plt.plot (pos_examples[:,0], pos_examples[:,1], 'rx')
-    plt.plot (neg_examples[:,0], neg_examples[:,1], 'bo') 
+    plt.plot (neg_examples[:,0], neg_examples[:,1], 'bo')
+    plt.scatter (x[indices,0],x[indices,1],s=100, facecolors='none', edgecolors='r')
     plt.show (block = False)
 
     # Plot the decision boundary
@@ -58,7 +59,7 @@ def main():
     plt.contour(xx,yy,p_grid,levels=[0.25,0.5,0.75],linewidths=2,colors=['green', 'black', 'green'],linestyles=['dashed','solid','dashed'])
     plt.title("Classifcation by using a relevance vector machine")
     plt.text(-1.1,-0.1,"Classification rate: "+str(classification_rate))
-    plt.show (block = False)
+    plt.show(block = False)
     
 def buildPhi(r,x1,x2):
     N = len(x1)
@@ -219,3 +220,9 @@ def sigma(y):
     return(1/(1+math.exp(-y)))
 
 main()
+
+
+
+
+
+
