@@ -1,5 +1,5 @@
 """classification.py: Implements a relevance vector machine."""
-__author__      = "David Hübner"
+__author__      = "David Huebner"
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,17 +7,13 @@ import math
 import pdb # for debugging
 
 def main():
-    data_train = np.loadtxt("synth.tr",skiprows=1)
-    x = data_train[:,0:2]
-    t = data_train[:,2]
 
+    #data_train, x, t, x_test, t_test = loadRipleysData()
+
+    x, t, x_test, t_test = loadPimaData()
     # Train RVM
     weights, indices = rvm(x,t)
 
-    data_test = np.loadtxt("synth.te",skiprows=1)
-    x_test = data_test[:,0:2]
-    t_test = data_test[:,2]
-    
     ## Build Test Phi
     K = len(indices)
     N = len(x_test)
@@ -30,13 +26,16 @@ def main():
     classification_rate = sum(check)/len(t_test)
     print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
 
+    '''
     # Plot Points
-    pos_examples = np.array([ data[0:2] for data in data_train if int(data[2]) == 0])
-    neg_examples = np.array([ data[0:2] for data in data_train if int(data[2]) == 1])
+    pos_examples = np.array([data[0:len(x[0]-1)] for data in data_train if int(data[len(x[0]-1)]) == 0])
+    neg_examples = np.array([data[0:len(x[0]-1)] for data in data_train if int(data[len(x[0]-1)]) == 1])
+    #pos_examples = np.array([x[i] for i in range(0,len(t)) if t[i] == 'No'])
+    #neg_examples = np.array([x[i] for i in range(0,len(t)) if t[i] == 'Yes'])
     plt.plot (pos_examples[:,0], pos_examples[:,1], 'rx')
     plt.plot (neg_examples[:,0], neg_examples[:,1], 'bo')
     plt.scatter (x[indices,0],x[indices,1],s=100, facecolors='none', edgecolors='r')
-    plt.show (block = False)
+    plt.show(block = False)
 
     # Plot the decision boundary
     # Generate the mesh
@@ -59,7 +58,8 @@ def main():
     plt.contour(xx,yy,p_grid,levels=[0.25,0.5,0.75],linewidths=2,colors=['green', 'black', 'green'],linestyles=['dashed','solid','dashed'])
     plt.title("Classifcation by using a relevance vector machine")
     plt.text(-1.1,-0.1,"Classification rate: "+str(classification_rate))
-    plt.show(block = False)
+    plt.show()#(block = False)
+    '''
     
 def buildPhi(r,x1,x2):
     N = len(x1)
@@ -108,7 +108,7 @@ def rvm(x,t):
     ### Status
     
     ########## Start outer Loop ############
-    while(iteration_count<=500): # Convergence Criteria: Either 500 iterations or alphas do not change much anymore.
+    while(iteration_count<=5000): # Convergence Criteria: Either 500 iterations or alphas do not change much anymore.
         
         # Select those alpha, w and parts of Phi which are used. The other ones are neglected.
         alpha_used = alpha[indices]
@@ -194,7 +194,7 @@ def rvm(x,t):
         w[not_used_indices] = 0
         
 
-        if (iteration_count % 50 == 0):
+        if (iteration_count % 200 == 0):
             print("Status: Iteration: "+str(iteration_count)+" Useful indices: "+str(K))
         
         iteration_count = iteration_count + 1
@@ -219,7 +219,62 @@ def sigma(y):
     # Defined before formula (23) in Tipping 2001
     return(1/(1+math.exp(-y)))
 
-main()
+#load Ripley's synthetic data
+def loadRipleysData():
+    data_train = np.loadtxt("datasets/synth.tr",skiprows=1)
+    rows,cols = data_train.shape
+    x = data_train[:,0:cols-1]
+    t = data_train[:,cols-1]
+
+    data_test = np.loadtxt("datasets/synth.te",skiprows=1)
+    rows_test,cols_test = data_test.shape
+    x_test = data_test[:,0:cols_test-1]
+    t_test = data_test[:,cols_test-1]
+
+    return data_train, x, t, x_test, t_test
+
+
+## load Pima data
+def loadPimaData():
+    #-----------------load training data--------------------------
+    f = open('datasets/pima.tr')
+    f.readline() # skip first line
+    data_train = []
+    for line in f.readlines():
+        data_train.append([i for i in line.split()])
+    data_train = np.array(data_train)
+    rows,cols = data_train.shape
+    x = (data_train[:,0:cols-1]).astype(float)              #convert features' values in float type
+    t = [(0,1)[d=='Yes'] for d in data_train[:,cols-1]]     #convert Yes and No to 1 and 0 correspondingly
+    f.close()
+
+     #feature scaling cause otherwise an exception occurs
+    for i in range(0,cols-2):
+        normalizing = np.max(x[:,i]) - np.min(x[:,i]) # find standard deviation
+        x[:,i] = x[:,i]/normalizing # divide all values of the column by the standard deviation
+
+
+    #-----------------load test data--------------------------
+    f = open('datasets/pima.te')
+    f.readline() # skip first line
+    data_test = []
+    for line in f.readlines():
+        data_test.append([i for i in line.split()])
+    data_test = np.array(data_test)
+    rows_test,cols_test = data_test.shape
+    x_test = (data_test[:,0:cols_test-1]).astype(float)         #convert features' values in float type
+    t_test= [(0,1)[d=='Yes'] for d in data_test[:,cols_test-1]] # convert Yes, No to 1 and 0 correspondingly
+    f.close()
+    #feature scaling cause otherwise an exception occurs
+    for i in range(0,cols_test-2):
+        normalizing = np.max(x_test[:,i]) - np.min(x_test[:,i]) # standard deviation
+        x_test[:,i] = x_test[:,i]/normalizing # divide all values of the column by the standard deviation
+
+    return x, t, x_test, t_test
+
+
+if __name__ == '__main__':
+    main()
 
 
 
