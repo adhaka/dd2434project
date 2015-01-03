@@ -8,16 +8,19 @@ import pdb # for debugging
 
 def main():
 
-    data_train, x, t, x_test, t_test = loadRipleysData()
-
-    #x, t, x_test, t_test = loadPimaData()
-    # Train RVM
-    weights, indices = rvm(x,t)
+    #data_train, x, t, x_test, t_test = loadRipleysData()
+    x, t, x_test, t_test = loadPimaData()
+    
+    # Train RVM. We have to choose the hyperparameter r depending on the data_set
+    # for Ripley, take r = 0.05
+    # for Pima, take r = 150
+    r = 150
+    weights, indices = rvm(x,t,r)
 
     ## Build Test Phi
     K = len(indices)
     N = len(x_test)
-    r = 0.5
+    
     Phi = buildPhi(r,x_test,x[indices])
 
     # Check Performance
@@ -70,7 +73,7 @@ def buildPhi(r,x1,x2):
             Phi[m,n] = gaussianKernel(r,x1[m],x2[n])
     return(Phi)
 
-def rvm(x,t):    
+def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
     # The Core of the algorithm. It consists of two nested loops.
     
     # The outer loop is adjusting the hyperparameter alpha and determines which indices are used.
@@ -86,8 +89,7 @@ def rvm(x,t):
     GRAD_STOP = 10**(-6)
     ALPHA_THRESHOLD = 10**9
     N = len(x)
-    r = 0.5  # Gaussian Width Parameter for Ripley's dataset. Given page 12, after formula 30
-
+   
     # Initial weights and hyperparameters alpha
     w = np.zeros(N+1)
     alpha = N**(-2)*np.ones(N+1) # I took this initial value 1/N^2 from the matlab implementation, but it does not really matter
@@ -108,7 +110,7 @@ def rvm(x,t):
     ### Status
     
     ########## Start outer Loop ############
-    while(iteration_count<=5000): # Convergence Criteria: Either 500 iterations or alphas do not change much anymore.
+    while(iteration_count<=500): # Convergence Criteria: Either 500 iterations or alphas do not change much anymore.
         
         # Select those alpha, w and parts of Phi which are used. The other ones are neglected.
         alpha_used = alpha[indices]
@@ -127,7 +129,6 @@ def rvm(x,t):
         data_term = -(sum(zero_class_log)+sum(one_class_log))
         regulariser = 0.5*np.dot(np.dot(w_used,A),w_used)
         err_old = data_term + regulariser
-
         ########## Inner Loop ##########
         # Implementation of the Newton's Method to update the weigths w
         for i in range(0,25): # More than 25 iteration should not be neccesary. The error normally converges quickly.
@@ -181,9 +182,9 @@ def rvm(x,t):
         alpha[indices]  =  np.array([gamma[i]*(w_used[i]**(-2)) for i in range(0,K)])
 
         # Convergence Criteria if alpha does not change enough anymore
-        difference = np.array([old_alpha[k]-alpha[k] for k in indices])
-        if (max(abs(difference)) < 1):
-            break        
+        #difference = np.array([old_alpha[k]-alpha[k] for k in indices])
+        #if (max(abs(difference)) < 1):
+        #    break        
 
         # Update useful indices
         indices = [k for k in range(0,N+1) if alpha[k] < ALPHA_THRESHOLD]
@@ -194,7 +195,7 @@ def rvm(x,t):
         w[not_used_indices] = 0
         
 
-        if (iteration_count % 200 == 0):
+        if (iteration_count % 50 == 0):
             print("Status: Iteration: "+str(iteration_count)+" Useful indices: "+str(K))
         
         iteration_count = iteration_count + 1
@@ -213,7 +214,9 @@ def gaussianKernel(r,x_m,x_n):
     # Based on Formula (30) in Tipping 2001
     # The width parameter r is given as 0.5
     return(math.exp(-(r**(-2)*np.linalg.norm(x_m-x_n)**2)))
-    
+
+
+
 def sigma(y):
     ''' Returns 1/(1+exp(-y)) '''
     # Defined before formula (23) in Tipping 2001
@@ -233,7 +236,6 @@ def loadRipleysData():
 
     return data_train, x, t, x_test, t_test
 
-
 ## load Pima data
 def loadPimaData():
     #-----------------load training data--------------------------
@@ -248,12 +250,6 @@ def loadPimaData():
     t = [(0,1)[d=='Yes'] for d in data_train[:,cols-1]]     #convert Yes and No to 1 and 0 correspondingly
     f.close()
 
-     #feature scaling cause otherwise an exception occurs
-    for i in range(0,cols-2):
-        normalizing = np.max(x[:,i]) - np.min(x[:,i]) # find standard deviation
-        x[:,i] = x[:,i]/normalizing # divide all values of the column by the standard deviation
-
-
     #-----------------load test data--------------------------
     f = open('datasets/pima.te')
     f.readline() # skip first line
@@ -265,13 +261,7 @@ def loadPimaData():
     x_test = (data_test[:,0:cols_test-1]).astype(float)         #convert features' values in float type
     t_test= [(0,1)[d=='Yes'] for d in data_test[:,cols_test-1]] # convert Yes, No to 1 and 0 correspondingly
     f.close()
-    #feature scaling cause otherwise an exception occurs
-    for i in range(0,cols_test-2):
-        normalizing = np.max(x_test[:,i]) - np.min(x_test[:,i]) # standard deviation
-        x_test[:,i] = x_test[:,i]/normalizing # divide all values of the column by the standard deviation
-
     return x, t, x_test, t_test
-
 
 if __name__ == '__main__':
     main()
