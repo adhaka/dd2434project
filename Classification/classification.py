@@ -8,9 +8,9 @@ import pdb # for debugging
 
 def main():
 
-    #data_train, x, t, x_test, t_test = loadRipleysData()
+    data_train, x, t, x_test, t_test = loadRipleysData()
 
-    x, t, x_test, t_test = loadPimaData()
+    #x, t, x_test, t_test = loadPimaData()
     # Train RVM
     weights, indices = rvm(x,t)
 
@@ -23,7 +23,7 @@ def main():
     # Check Performance
     y_pred = np.dot(Phi,weights)
     check = [(y_pred[k]>0) == t_test[k] for k in range(0,len(t_test))]
-    classification_rate = sum(check)/len(t_test)
+    classification_rate = float(sum(check))/len(t_test)
     print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
 
     '''
