@@ -16,17 +16,17 @@ def main():
     # for Breast Cancer, take r = 4
     # for Titanic, take r = 4
     # for German, take r = 10
-    r = 5
+    r = 4
 
     if raetschDataset:
         #-------------------------------------------------------------------------------------------------------------------
         # code for Banana, Breast Cancer, Titanic, Waveform, German. Image datasets.
 
         # select dataset to classify
-        #dataset = "breast_cancer/breast-cancer"
+        dataset = "breast_cancer/breast-cancer"
         #dataset = "german/german"
         #dataset = "banana/banana"
-        dataset = "image/image"
+        #dataset = "image/image"
         #dataset = "waveform/waveform"
         #dataset = "titanic/titanic"
 
@@ -144,7 +144,7 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
 
     ############## List of Variables and Initialisation ################
 
-    LAMBDA_MIN	= 2**(-8)
+    LAMBDA_MIN	= 2**(-10)
     GRAD_STOP = 10**(-6)
     ALPHA_THRESHOLD = 10**9
     N = len(x)
@@ -192,6 +192,7 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         data_term = -(sum(zero_class_log)+sum(one_class_log))
         regulariser = 0.5*np.dot(np.dot(w_used,A),w_used)
         err_old = data_term + regulariser
+        #pdb.set_trace()
         ########## Inner Loop ##########
         # Implementation of the Newton's Method to update the weigths w
         for i in range(0,25): # More than 25 iteration should not be neccesary. The error normally converges quickly.
@@ -236,10 +237,10 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
                 # If the error has been reduced, then accept the step. Else, reduce the length lambda of the step
                 if err_new > err_old:
                     lamb = lamb/2
-                else:
-                    w_used = w_new
-                    err_old = err_new
+                else:                    
                     break
+            w_used = w_new
+            err_old = err_new
             # If the gradient is too small, then stop iterating
             if np.linalg.norm(g)/K < GRAD_STOP:
                 break
@@ -266,7 +267,7 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         w[not_used_indices] = 0
         
 
-        if (iteration_count % 100 == 0):
+        if (iteration_count % 50 == 0):
             print("Status: Iteration: "+str(iteration_count)+" Useful indices: "+str(K))
         
         iteration_count = iteration_count + 1
