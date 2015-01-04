@@ -8,26 +8,81 @@ import pdb # for debugging
 
 def main():
 
-    #data_train, x, t, x_test, t_test = loadRipleysData()
-    x, t, x_test, t_test = loadPimaData()
-    
-    # Train RVM. We have to choose the hyperparameter r depending on the data_set
+    raetschDataset = True # when true one of hte Raetsch datasets (Banana, titanic, etc) is to be classified, false otherwise
+
+    # Train RVM. We have to choose the hyper-parameter r depending on the data_set
     # for Ripley, take r = 0.05
     # for Pima, take r = 150
-    r = 150
-    weights, indices = rvm(x,t,r)
+    # for Breast Cancer, take r = 4
+    # for German, take 30?
+    r = 200
 
-    ## Build Test Phi
-    K = len(indices)
-    N = len(x_test)
-    
-    Phi = buildPhi(r,x_test,x[indices])
+    if raetschDataset:
+        #-------------------------------------------------------------------------------------------------------------------
+        # code for Banana, Breast Cancer, Titanic, Waveform, German. Image datasets.
 
-    # Check Performance
-    y_pred = np.dot(Phi,weights)
-    check = [(y_pred[k]>0) == t_test[k] for k in range(0,len(t_test))]
-    classification_rate = float(sum(check))/len(t_test)
-    print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
+        # select dataset to classify
+        #dataset = "breast_cancer/breast-cancer"
+        #dataset = "german/german"
+        #dataset = "banana/banana"
+        #dataset = "image/image"
+        #dataset = "waveform/waveform"
+        dataset = "titanic/titanic"
+
+        class_rate = []
+        numOfIndices = []
+
+        for i in range (0,10):
+            #filenames
+            test_f = "datasets/"+dataset+"_test_data_"+str(i+1)+".asc"
+            #print test_f
+            test_label_f = "datasets/"+dataset+"_test_labels_"+str(i+1)+".asc"
+            #print test_label_f
+            train_f = "datasets/"+dataset+"_train_data_"+str(i+1)+".asc"
+            #print train_f
+            train_label_f = "datasets/"+dataset+"_train_labels_"+str(i+1)+".asc"
+            #print train_label_f
+
+            x, t, x_test, t_test = loadData(test_f,test_label_f,train_f,train_label_f)
+
+            weights, indices = rvm(x,t,r)
+            numOfIndices.append(len(indices))
+
+            ## Build Test Phi
+            K = len(indices)
+            N = len(x_test)
+
+            Phi = buildPhi(r,x_test,x[indices])
+
+            # Check Performance
+            y_pred = np.dot(Phi,weights)
+            check = [(y_pred[k]>0) == t_test[k] for k in range(0,len(t_test))]
+            class_rate.append(float(sum(check))/len(t_test))
+        #print("Classification rate on test data with: " +str(N)+" data points is: "+str(class_rate))
+        #print("# of RVMs on test data: " +str(numOfIndices))
+
+        print("*-----------------------------------------------------------------------------*")
+        print("Mean classification rate on test data with: " +str(N)+" data points is: "+str(float(sum(class_rate))/len(class_rate)))
+        print("Mean # of RVMs on test data with: " +str(N)+" data points is: "+str(float(sum(numOfIndices))/len(numOfIndices)))
+
+        #-------------------------------------------------------------------------------------------------------------------
+
+    else:
+        data_train, x, t, x_test, t_test = loadRipleysData()
+        #x, t, x_test, t_test = loadPimaData()
+        weights, indices = rvm(x,t,r)
+
+        ## Build Test Phi
+        K = len(indices)
+        N = len(x_test)
+
+        Phi = buildPhi(r,x_test,x[indices])
+
+        # Check Performance
+        y_pred = np.dot(Phi,weights)
+        check = [(y_pred[k]>0) == t_test[k] for k in range(0,len(t_test))]
+        classification_rate = float(sum(check))/len(t_test)
+        print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
 
     '''
     # Plot Points
@@ -195,7 +250,7 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         w[not_used_indices] = 0
         
 
-        if (iteration_count % 50 == 0):
+        if (iteration_count % 100 == 0):
             print("Status: Iteration: "+str(iteration_count)+" Useful indices: "+str(K))
         
         iteration_count = iteration_count + 1
@@ -234,7 +289,7 @@ def loadRipleysData():
     x_test = data_test[:,0:cols_test-1]
     t_test = data_test[:,cols_test-1]
 
-    return data_train, x, t, x_test, t_test
+    return (data_train, x, t, x_test, t_test)
 
 ## load Pima data
 def loadPimaData():
@@ -261,7 +316,22 @@ def loadPimaData():
     x_test = (data_test[:,0:cols_test-1]).astype(float)         #convert features' values in float type
     t_test= [(0,1)[d=='Yes'] for d in data_test[:,cols_test-1]] # convert Yes, No to 1 and 0 correspondingly
     f.close()
-    return x, t, x_test, t_test
+    return (x, t, x_test, t_test)
+
+## load data
+def loadData(test_file,test_labels,train_file,train_labels):
+    x = np.loadtxt(test_file)
+    temp = np.loadtxt(test_labels)
+    t = [(0,1)[i==1] for i in temp] # convert 1, -1 to 1 and 0 correspondingly
+
+    x_test = np.loadtxt(train_file)
+    t_temp = np.loadtxt(train_labels)
+    t_test = [(0,1)[d==1] for d in t_temp] # convert 1, -1 to 1 and 0 correspondingly
+
+
+    return (x, t, x_test, t_test)
+
+
 
 if __name__ == '__main__':
     main()
