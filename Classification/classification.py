@@ -27,7 +27,7 @@ def main():
         #dataset = "banana/banana"
         #dataset = "image/image"
         #dataset = "waveform/waveform"
-        dataset = "titanic/titanic"
+        #dataset = "titanic/titanic"
 
         class_rate = []
         numOfIndices = []
