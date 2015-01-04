@@ -16,7 +16,7 @@ def main():
     # for Breast Cancer, take r = 4
     # for Titanic, take r = 4
     # for German, take r = 10
-    r = 100
+    r = 5
 
     if raetschDataset:
         #-------------------------------------------------------------------------------------------------------------------
