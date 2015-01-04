@@ -23,7 +23,7 @@ def main():
 
         # select dataset to classify
         #dataset = "breast_cancer/breast-cancer"
-        #dataset = "german/german"
+        dataset = "german/german"
         #dataset = "banana/banana"
         #dataset = "image/image"
         #dataset = "waveform/waveform"
@@ -43,7 +43,7 @@ def main():
             train_label_f = "datasets/"+dataset+"_train_labels_"+str(i+1)+".asc"
             #print train_label_f
 
-            x, t, x_test, t_test = loadData(test_f,test_label_f,train_f,train_label_f)
+            x, t, x_test, t_test = loadData(train_f,train_label_f,test_f,test_label_f)
 
             weights, indices = rvm(x,t,r)
             numOfIndices.append(len(indices))
@@ -62,7 +62,7 @@ def main():
         #print("# of RVMs on test data: " +str(numOfIndices))
 
         print("*-----------------------------------------------------------------------------*")
-        print("Mean classification rate on test data with: " +str(N)+" data points is: "+str(float(sum(class_rate))/len(class_rate)))
+        print("Mean classification rate on test data: "+dataset+" with: " +str(N)+" data points is: "+str(float(sum(class_rate))/len(class_rate)))
         print("Mean # of RVMs on test data with: " +str(N)+" data points is: "+str(float(sum(numOfIndices))/len(numOfIndices)))
 
         #-------------------------------------------------------------------------------------------------------------------
