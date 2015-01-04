@@ -11,11 +11,12 @@ def main():
     raetschDataset = True # when true one of hte Raetsch datasets (Banana, titanic, etc) is to be classified, false otherwise
 
     # Train RVM. We have to choose the hyper-parameter r depending on the data_set
-    # for Ripley, take r = 0.05
+    # for Ripley, take r = 0.5
     # for Pima, take r = 150
     # for Breast Cancer, take r = 4
-    # for German, take 30?
-    r = 200
+    # for Titanic, take r = 4
+    # for German, take r = 10
+    r = 100
 
     if raetschDataset:
         #-------------------------------------------------------------------------------------------------------------------
@@ -25,14 +26,15 @@ def main():
         #dataset = "breast_cancer/breast-cancer"
         #dataset = "german/german"
         #dataset = "banana/banana"
-        #dataset = "image/image"
+        dataset = "image/image"
         #dataset = "waveform/waveform"
-        dataset = "titanic/titanic"
+        #dataset = "titanic/titanic"
 
         class_rate = []
         numOfIndices = []
 
         for i in range (0,10):
+            print("Data/Training Set number:", i)
             #filenames
             test_f = "datasets/"+dataset+"_test_data_"+str(i+1)+".asc"
             #print test_f
@@ -44,7 +46,6 @@ def main():
             #print train_label_f
 
             x, t, x_test, t_test = loadData(test_f,test_label_f,train_f,train_label_f)
-
             weights, indices = rvm(x,t,r)
             numOfIndices.append(len(indices))
 
@@ -62,14 +63,14 @@ def main():
         #print("# of RVMs on test data: " +str(numOfIndices))
 
         print("*-----------------------------------------------------------------------------*")
-        print("Mean classification rate on test data with: " +str(N)+" data points is: "+str(float(sum(class_rate))/len(class_rate)))
-        print("Mean # of RVMs on test data with: " +str(N)+" data points is: "+str(float(sum(numOfIndices))/len(numOfIndices)))
+        print("Mean Error Rate on training data with N=" +str(x.shape[0])+" data points and d="+str(x.shape[1])+" features is: "+"%.3f" %(1-float(sum(class_rate))/len(class_rate)))
+        print("Mean # of RVMs on test data with N=" +str(N)+" data points is: "+str(float(sum(numOfIndices))/len(numOfIndices)))
 
         #-------------------------------------------------------------------------------------------------------------------
 
     else:
-        data_train, x, t, x_test, t_test = loadRipleysData()
-        #x, t, x_test, t_test = loadPimaData()
+        #data_train, x, t, x_test, t_test = loadRipleysData()
+        x, t, x_test, t_test = loadPimaData()
         weights, indices = rvm(x,t,r)
 
         ## Build Test Phi
@@ -82,7 +83,10 @@ def main():
         y_pred = np.dot(Phi,weights)
         check = [(y_pred[k]>0) == t_test[k] for k in range(0,len(t_test))]
         classification_rate = float(sum(check))/len(t_test)
-        print("Classification rate on test data with: " +str(N)+" data points is: "+str(classification_rate))
+        print("*-----------------------------------------------------------------------------*")
+        print("Error rate on training data with N=" +str(x.shape[0])+" data points and d="+str(x.shape[1])+" features is: "+"%.3f" % (1-classification_rate))
+        print("#RVMs on test data with N=" +str(N)+" data points is: "+str(K))
+
 
     '''
     # Plot Points
@@ -178,7 +182,11 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         ## This part computes the likelihood as in formula (24) in Tipping 2001
         # The aim is of course to maximize the likelihood, or here to minimize (-1)*likelihhod.         
         Phiw = np.dot(Phi,w_used)
+        ## Fix rounding errors to avoid math domain error part 1
+        Phiw[Phiw<-500] = -500
         Y = sigmoid(Phiw)
+        ## Fix rounding erros to avoid math domain error part 2
+        Y[Y==1.0] = 1.0-(1e-16)
         zero_class_log = [math.log(Y[k]) for k in range(0,N) if t[k] == 1]
         one_class_log = [math.log(1-Y[k]) for k in range(0,N) if t[k] == 0]
         data_term = -(sum(zero_class_log)+sum(one_class_log))
@@ -187,10 +195,14 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         ########## Inner Loop ##########
         # Implementation of the Newton's Method to update the weigths w
         for i in range(0,25): # More than 25 iteration should not be neccesary. The error normally converges quickly.
-
+        
             # Using Equation (25) in Tipping 2001 to compute the matrix Sigma = (Phi^T*B*Phi+A)^-1
             Phiw = np.dot(Phi,w_used)
+            ## Fix rounding errors to avoid math domain error part 1
+            Phiw[Phiw<-500] = -500
             Y = sigmoid(Phiw)
+            ## Fix rounding erros to avoid math domain error part 2
+            Y[Y==1.0] = 1.0-(1e-16)
             beta = [Y[n]*(1-Y[n]) for n in range(0,N)]
             B = beta*np.identity((N))
             Hessian = np.dot(np.dot(np.transpose(Phi),B),Phi)+A
@@ -202,14 +214,18 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
 
             # Solve linear system
             delta_w = np.dot(Sigma,g)
-
+            
             # Step length
             lamb = 1
             while lamb > LAMBDA_MIN:
                 # Calculate the error again for the step length lambda
                 w_new = w_used + lamb*np.array(delta_w)
                 Phiw = np.dot(Phi,w_new)
+                ## Fix rounding errors to avoid math domain error part 1
+                Phiw[Phiw<-500] = -500
                 Y = sigmoid(Phiw)
+                ## Fix rounding erros to avoid math domain error part 2
+                Y[Y==1.0] = 1.0-(1e-16)
                 zero_class_log = [math.log(Y[k]) for k in range(0,N) if t[k] == 1]
                 one_class_log = [math.log(1-Y[k]) for k in range(0,N) if t[k] == 0]
                 data_term = -(sum(zero_class_log)+sum(one_class_log))/N
@@ -255,7 +271,7 @@ def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
         
         iteration_count = iteration_count + 1
         
-    print("Algorithm has finished.")
+    print("Optimization for this training set has finished.")
     w_used = w[indices]
     # Adjust the counting
     indices = np.array(indices)-1
@@ -320,18 +336,15 @@ def loadPimaData():
 
 ## load data
 def loadData(test_file,test_labels,train_file,train_labels):
-    x = np.loadtxt(test_file)
-    temp = np.loadtxt(test_labels)
-    t = [(0,1)[i==1] for i in temp] # convert 1, -1 to 1 and 0 correspondingly
-
-    x_test = np.loadtxt(train_file)
+    x = np.loadtxt(train_file)
     t_temp = np.loadtxt(train_labels)
-    t_test = [(0,1)[d==1] for d in t_temp] # convert 1, -1 to 1 and 0 correspondingly
-
+    t = [(0,1)[d==1] for d in t_temp] # convert 1, -1 to 1 and 0 correspondingly
+ 
+    x_test = np.loadtxt(test_file)
+    temp = np.loadtxt(test_labels)
+    t_test = [(0,1)[i==1] for i in temp] # convert 1, -1 to 1 and 0 correspondingly
 
     return (x, t, x_test, t_test)
-
-
 
 if __name__ == '__main__':
     main()
