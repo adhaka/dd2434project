@@ -26,7 +26,8 @@ class DataSets:
 
     def genBoston(self):
         boston = datasets.load_boston()
-        # print boston.data.shape
+        print boston.target
+        exit()
         X, Y = boston.data, boston.target
         return X, Y
 

@@ -3,7 +3,8 @@ import numpy as np
 from math import *
 import random
 import math
-from sklearn import datasets
+from sklearn import datasets, grid_search, cross_validation, metrics
+
 from sklearn import svm
 import matplotlib.pyplot as plt
 from cvxopt.solvers import qp
@@ -13,7 +14,8 @@ from cvxopt.base import matrix
 convThreshold = 0.00000001
 alphaThreshold = 10
 relAlphaVal = 10
-relAlphaValNoisa = 150
+relAlphaValNoise = 150
+BASIS = 'linspace'
 
 
 
@@ -37,36 +39,53 @@ class DataSets:
         return X, Y
 
 
+    def genBoston(self):
+        boston = datasets.load_boston()
+        # print boston.data.shape
+        X, Y = boston.data, boston.target
+        return X, Y
+
 
 
 def generateData(noise = 0, N = 100):
     xini = np.linspace(-10, 10, N)
-    xinp = map(lambda x:[x] , xini)
+    yact = (1/abs(xini)) * np.sin(np.abs(xini))
 
+    temp = np.random.rand(N,1)
+    for i in range(len(xini)):
+        temp[i,0] = xini[i]
+
+    # print temp
+    # xinp = map(lambda x:np.ones(x), xini)
+    xinp = temp
+
+    ynoise = yact
     # xinp = xini.reshape(1,100)
-    finp = (1/abs(xini)) * np.sin(np.abs(xini))
     if noise == 1:
-        finp = noisify(finp, 'uniform')
+        ynoise = noisify(yact, 'uniform')
     if noise == 2:
-        finp = noisify(finp, 'gaussian')
-    print xinp
-    print finp.shape
+        ynoise = noisify(yact, 'gaussian')
 
-    return xinp, finp
+    print xinp.shape
+    # print finp.shape
+    # print xinp
+
+    return xinp, ynoise, yact
 
 
 def noisify(yinp, type='uniform'):
     finp = yinp
     if type == 'uniform':
-        noise = np.random.uniform(-0.2, 0.2, len(yinp))
+        noise = np.random.uniform(-0.1, 0.1, len(yinp))
     if type == 'gaussian':
-        noise = np.random.normal(0, 0.2, 100)
+        noise = np.random.normal(0, 0.1, len(yinp))
     finp = finp + noise
     return finp
 
 
 def rmse(xo, xp):
-    val = sqrt(sum([(x-y) ** 2 for x,y in zip(xo,xp)]))
+    val = sqrt(sum([(x-y)**2  for x,y in zip(xo,xp)])/len(xo))
+    # val = sum([abs(x-y)  for x,y in zip(xo,xp)])
     return val
 
 
@@ -108,7 +127,7 @@ def getDesMat(xinp):
     for i in range(len(xinp)):
         desMat[i,0] = 1
         for j in range(len(xinp)):
-            desMat[i,j+1] = kernel(xinp[i], xinp[j], 'linspline')
+            desMat[i,j+1] = kernel(xinp[i], xinp[j], BASIS)
     return desMat
 
 
@@ -120,7 +139,7 @@ def predictRVM(xtest, xinp, muMat):
         xkernel = np.ones(len(xinp) + 1)
         xkernel[0] = 1
         for j in range(len(xinp)):
-            xkernel[j+1] = kernel(xtest[i], xinp[j], 'linspline')
+            xkernel[j+1] = kernel(xtest[i], xinp[j], BASIS)
         yest[i] =  np.dot(np.transpose(muMat),xkernel)
 
     xplot, yplot = generateData(noise=0, N=100)
@@ -239,61 +258,150 @@ def svmtrain(xinp, yinp):
 
 def main():
     ds  = DataSets()
-    xinp, yinp=  ds.genFriedman(1)
-    xinp, yinp = generateData(noise = 2, N = 100)
-    xplot, yplot = generateData(noise=0, N = 100)
+    # xinp, yinp=  ds.genFriedman(3, N= 240, D = 4)
+    #
+    # xinp, yinp = ds.genBoston()
+    xinp, yinp, yact = generateData(noise = 0, N = 100)
+    # xplot, yplot, yran  = generateData(noise=0, N = 100)
+    xtest, ytestnoise, yact  = generateData(noise = 0, N = 1000)
+    # xtest, ytestnoise = ds.genFriedman(3, N=1000, D=4)
+    # yact = ytestnoise
+
     splKernel = splineKernel(xinp)
-    svr_rbf  = svm.SVR(C = 1, epsilon = 0.05, kernel = 'rbf')
-    svr_spline  = svm.SVR(C = 10, epsilon = 0.02, kernel = 'precomputed')
-    print type(yinp)
-    yinp = list(yinp)
-    print splKernel.shape
-    beta = 100
-    # print yinp.shape
+
+
+
+################## rvm training here ######################
+    # beta = 100
+    #
+    # muMat = rvmtrain(xinp, yinp, beta)
+    # y_rvm_est = predictRVM(xinp, xinp, muMat)
+    # err_rvm = rmse(yinp, y_rvm_est)
+    # print 'rvm error'
+    # print err_rvm
+
+########################################################
+########################################################
+
+#################################################
+    ### svm training and parameter tuning by cross-validation
+    ### for benchmarking.
+################################
+    #
+    # C_range = 10 ** np.arange(0, 4)
+    # gamma_range = [0.1, 0.5, 1]
+    # epsilon_range= [0.005, 0.01, 0.02, 0.05]
+    #
+    #
+    # param_grid = dict(gamma = gamma_range, C= C_range)
+    #
+    #
+    # regressList =[]
+    #
+    # maxscore = 0
+    #
+    # for c in C_range:
+    #     for epsilon in epsilon_range:
+    #         for g in gamma_range:
+    #             regressor = svm.SVR(C = c, epsilon = epsilon, kernel = 'rbf', gamma =g )
+    #             clfscore = cross_validation.cross_val_score(regressor, xinp, yinp, cv=5, score_func= metrics.r2_score)
+    #             print clfscore
+    #             newscore = clfscore.mean()
+    #             if newscore > maxscore:
+    #                 maxscore = newscore
+    #                 bestC = c
+    #                 bestEps = epsilon
+    #                 bestGamma = g
+    #                 print 'lol'
+    #             regressList.append((c, epsilon, g, newscore))
+
+
+    # print bestC
+    # print bestEps
+    # print bestGamma
+
+    # print regressList
+    ######## tuning manually #######################
+
+    indices = np.random.permutation(len(yinp))
+
+    print indices
     # exit()
-    muMat = rvmtrain(xinp, yinp, beta)
-    y_rvm_est = predictRVM(xinp, xinp, muMat)
-    err_rvm = rmse(yinp, y_rvm_est)
-    print 'rvm error'
-    print err_rvm
+    trainindices, testindices = indices[:99], indices[99:]
+    # print trainindices
+    # print xinp[:]
+    # exit()
+    xinp_train, xinp_test = xinp[trainindices], xinp[testindices]
+    print xinp_test
+    # exit()
+    yinp_train, yinp_test = yinp[trainindices], yinp[testindices]
+
+
+
+    ##################################################
+
+    bestC = 1
+    bestEps = 0.02
+    bestGamma = 0.3
+    svr_rbf  = svm.SVR(C = bestC, epsilon = bestEps, kernel = 'rbf', gamma = bestGamma)
+    svr_spline  = svm.SVR(C = 10, epsilon = 0.02, kernel = 'precomputed')
+
+    # cv = cross_validation.StratifiedKFold(y=yinp, n_folds=5)
+    # grid = grid_search.GridSearchCV(svm.SVR(), param_grid=param_grid, cv=cv)
+    # grid.fit(xinp, yinp)
+    # exit()
+
+    # print("The best classifier is: ", grid.best_estimator_)
+    yinp = list(yinp)
+
+    # print splKernel.shape
+
     svr_rbf.fit(xinp, yinp)
-    svr_spline.fit(splKernel, yinp)
+    # svr_spline.fit(splKernel, yinp)
+    svr_rbf.fit(xinp_train, yinp_train)
 
-    # x_min, x_max = xinp[:].min() - 1, xinp[:].max() + 1
-    # y_min, y_max = yinp[:].min() - 1, xinp[:].max() + 1
-    # xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-    # Z = svr_rbf.predict(np.c_[xx.ravel(), yy.ravel()])
+    yrbf_est_test = svr_rbf.predict(xtest)
+    err_rbf_test  = rmse(yact, yrbf_est_test)
 
+    print 'hi'
+    print len(yrbf_est_test)
+    print err_rbf_test
+    print len(svr_rbf.support_vectors_)
 
-    # Z = Z.reshape(xx.shape)
-    # plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Paired)
-    yest = svr_rbf.predict(xinp)
-    yspest = svr_spline.predict(splKernel)
-    err_rbf = rmse(yinp, yest)
-    err_spline = rmse(yinp, yspest)
+    yrbf_est = svr_rbf.predict(xtest)
+    # yspline_est = svr_spline.predict(splKernel)
+    err_rbf = rmse(yinp, yrbf_est)
+    # err_spline = rmse(yinp, yspline_est)
     # rvm1 = rvmtrain(xinp, yinp)
 
-    print err_rbf
-    print err_spline
+    # clfsc= cross_validation.cross_val_score(svr_rbf, xinp, yinp, cv=5, score_func= metrics.r2_score)
+    # print clfsc
+
 
     plt.ylim((-0.4, 1.2))
     plt.xlim((-11, 11))
-    print svr_rbf
-    print svr_rbf.support_
-    xinp_support = [xinp[i] for i in svr_spline.support_]
-    yinp_support = [yinp[i] for i in svr_spline.support_]
-    print yinp_support
-    print xinp_support
+
+    # xinp_support = [xinp[i] for i in svr_spline.support_]
+    # yinp_support = [yinp[i] for i in svr_spline.support_]
+
+    xinp_support = [xinp[i] for i in svr_rbf.support_]
+    yinp_support = [yinp[i] for i in svr_rbf.support_]
+    # print yinp_support
+    # print xinp_support
     # print x
     print len(svr_rbf.support_vectors_)
+    # print len(svr_spline.support_vectors_)
     plt.scatter(xinp_support, yinp_support, marker = 'o', c='r', alpha=1, s=60)
     plt.plot(xinp, yinp, marker = '^', c= 'b')
-    plt.plot(xplot, yplot, marker = '+', c='y')
+    # plt.plot(xplot, yplot, marker = '+', c='y')
+    plt.plot(xtest, yact, marker = '+', c='g')
+    plt.plot(xtest, yrbf_est_test, marker = '+', c='y')
+
     # plt.plot(xinp, yest, marker = '^', c= 'r')
     # plt.plot(xinp, yspest, marker = '^', c= 'r')
     # plt.plot()
-    plt.show()
-    # plt.savefig('svm-rbf2.png')
+    # plt.show()
+    plt.savefig('svm-rbf-0.png')
 
 
 
