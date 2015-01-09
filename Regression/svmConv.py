@@ -18,9 +18,10 @@ from cvxopt.base import matrix
 
 convThreshold = 0.001
 alphaThreshold = 1000000000
-relAlphaVal = 10
-relAlphaValNoisa = 150
+relAlphaVal = 100
+relAlphaValNoise = 150
 BASIS = 'gaussian'
+R = 4
 
 def generateData(noise = 0, N = 100):
     xini = np.linspace(-10, 10, N)
@@ -41,10 +42,6 @@ def generateData(noise = 0, N = 100):
     if noise == 2:
         ynoise = noisify(yact, 'gaussian')
 
-    print xinp.shape
-    # print finp.shape
-    # print xinp
-
     return xinp, ynoise, yact
 
 
@@ -64,7 +61,7 @@ def rmse(xo, xp):
 
 
 def kernel(x, y, type='l'):
-    r = 1
+
     if type == 'l':
         val = sum([p*q  for p,q in zip(x, y)]) + 1
     if type == 'sq':
@@ -75,7 +72,7 @@ def kernel(x, y, type='l'):
         val = reduce(lambda x,y: x*y, [(p*q + 1 + p*q*min(p,q) - ((p+q)/2) * min(p,q) ** 2 + (min(p,q) ** 3)/3) for p,q in zip(x,y) ])
         # val = reduce(lambda x,y: x*y, [(p*q + 1 + min(p,q)) for p,q in zip(x,y)])
     if type == 'gaussian':
-        val = math.exp(-(r**(-2)*(x[0]-y[0])**2))
+        val = math.exp(-(R**(-2)*(x[0]-y[0])**2))
     return val
 
 def splineKernel(x):
@@ -120,8 +117,8 @@ def predictRVM(xtest, xinp, muMat):
     plt.scatter(xtest, yest, marker = '^', s = 70, c='yellow')
     print 'lol'
 #    exit()
-    # plt.savefig('rvm-sinc-0noise-estimate.png')
-    plt.show()
+    plt.savefig('rvm-sinc-uniform-1.png')
+    # plt.show()
 
     return yest
 
@@ -141,7 +138,7 @@ def rvmtrain(xinp, yinp, beta = 100):
     idx =  np.ones(len(alphas)) == 1
     mMat = np.zeros(len(alphas))
     iterationCount = 0
-    for t in range(500):
+    for t in range(1200):
         iterationCount = iterationCount + 1
         idx = np.abs(newAlphas) < alphaThreshold
         idx = np.squeeze(idx)
@@ -153,7 +150,7 @@ def rvmtrain(xinp, yinp, beta = 100):
         sigMat = np.linalg.inv(sig)
         mMat[idx] = beta * np.dot(sigMat, np.dot(dmat[:,idx].transpose(), target))
                 
-        oldAlphas = np.copy(newAlphas)       
+        oldAlphas = np.copy(newAlphas)
         newAlphas[idx] = np.transpose( ( 1 - np.transpose(newAlphas[idx]) * np.diag(sigMat) ) / np.array(map(float,mMat[idx]**2)) )
         
 #        for i in range(len(newAlphas)):
@@ -186,7 +183,7 @@ def rvmtrain(xinp, yinp, beta = 100):
 #    print y_rel
     plt.ylim((-0.4, 1.2))
     plt.xlim((-11, 11))
-    plt.scatter(zip(*x_rel), y_rel, marker = 'o', c='r', s=50)
+    plt.scatter(zip(*x_rel), y_rel, marker = 'o', c='r', s=70)
     plt.plot(xinp, yinp, marker = '^', c= 'b')
 
     #plt.show()
@@ -204,15 +201,16 @@ def svmtrain(xinp, yinp):
 
 def main():
 #    plt.figure()
-    xinp, yinp, yact = generateData(noise = 1)
+    xinp, yinp, yact = generateData(noise = 1, N = 100)
+    # xrand, yrand, yorig = generateData(noise = 0, N = 100)
 #    splKernel = splineKernel(xinp)
 #    svr_rbf  = svm.SVR(C = 1, epsilon = 0.01, kernel = 'rbf')
 #    svr_spline  = svm.SVR(C = 10, epsilon = 0.02, kernel = 'precomputed')
 #    print type(yinp)
 #    yinp = list(yinp)
 #    print splKernel.shape
-    xtest, ytestnoise, yact  = generateData(noise = 0, N = 1000)
-    plt.plot(xtest, yact, marker='+', c='g')
+    xtest, ytestnoise, ytestact  = generateData(noise = 0, N = 1000)
+    plt.plot(xtest, ytestact, marker='+', c='g')
     beta = 100
     # print yinp.shape
     # exit()
