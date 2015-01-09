@@ -20,19 +20,32 @@ convThreshold = 0.001
 alphaThreshold = 1000000000
 relAlphaVal = 10
 relAlphaValNoisa = 150
+BASIS = 'gaussian'
 
-def generateData(noise = 0):
-    xini = np.linspace(-10, 10, 100)
-    xinp = map(lambda x:[x] , xini)
+def generateData(noise = 0, N = 100):
+    xini = np.linspace(-10, 10, N)
+    yact = (1/abs(xini)) * np.sin(np.abs(xini))
 
+    temp = np.random.rand(N,1)
+    for i in range(len(xini)):
+        temp[i,0] = xini[i]
+
+    # print temp
+    # xinp = map(lambda x:np.ones(x), xini)
+    xinp = temp
+
+    ynoise = yact
     # xinp = xini.reshape(1,100)
-    finp = (1/abs(xini)) * np.sin(np.abs(xini))
     if noise == 1:
-        finp = noisify(finp, 'uniform')
-    print xinp
-    print finp.shape
+        ynoise = noisify(yact, 'uniform')
+    if noise == 2:
+        ynoise = noisify(yact, 'gaussian')
 
-    return xinp, finp
+    print xinp.shape
+    # print finp.shape
+    # print xinp
+
+    return xinp, ynoise, yact
 
 
 def noisify(yinp, type='uniform'):
@@ -40,7 +53,7 @@ def noisify(yinp, type='uniform'):
     if type == 'uniform':
         noise = np.random.uniform(-0.2, 0.2, len(yinp))
     if type == 'gaussian':
-        noise = np.random.normal(0, 1, 100)
+        noise = np.random.normal(0, 0.1, len(yinp))
     finp = finp + noise
     return finp
 
@@ -51,7 +64,7 @@ def rmse(xo, xp):
 
 
 def kernel(x, y, type='l'):
-    r = 0.5
+    r = 1
     if type == 'l':
         val = sum([p*q  for p,q in zip(x, y)]) + 1
     if type == 'sq':
@@ -88,7 +101,7 @@ def getDesMat(xinp):
     for i in range(len(xinp)):
         desMat[i,0] = 1
         for j in range(len(xinp)):
-            desMat[i,j+1] = kernel(xinp[i], xinp[j], 'gaussian')
+            desMat[i,j+1] = kernel(xinp[i], xinp[j], BASIS)
     return desMat
 
 
@@ -100,7 +113,7 @@ def predictRVM(xtest, xinp, muMat):
         xkernel = np.ones(len(xinp) + 1)
         xkernel[0] = 1
         for j in range(len(xinp)):
-            xkernel[j+1] = kernel(xtest[i], xinp[j], 'gaussian')
+            xkernel[j+1] = kernel(xtest[i], xinp[j], BASIS)
         yest[i] =  np.dot(np.transpose(muMat),xkernel)
 
     print yest.shape
@@ -191,22 +204,28 @@ def svmtrain(xinp, yinp):
 
 def main():
 #    plt.figure()
-    xinp, yinp = generateData(noise = 0)
+    xinp, yinp, yact = generateData(noise = 1)
 #    splKernel = splineKernel(xinp)
 #    svr_rbf  = svm.SVR(C = 1, epsilon = 0.01, kernel = 'rbf')
 #    svr_spline  = svm.SVR(C = 10, epsilon = 0.02, kernel = 'precomputed')
 #    print type(yinp)
 #    yinp = list(yinp)
 #    print splKernel.shape
+    xtest, ytestnoise, yact  = generateData(noise = 0, N = 1000)
+    plt.plot(xtest, yact, marker='+', c='g')
     beta = 100
     # print yinp.shape
     # exit()
     muMat, converged = rvmtrain(xinp, yinp, beta)
     print muMat
+    # y_rvm_est = predictRVM(xinp, xinp, muMat)
     y_rvm_est = predictRVM(xinp, xinp, muMat)
-    err_rvm = rmse(yinp, y_rvm_est)
+
+    err_rvm = rmse(yact, y_rvm_est)
+    # err_rvm_2 = rmse()
     print 'rvm error'
     print err_rvm
+    # plt.plot(xtest, yact, marker = '+', c='g')
 #    svr_rbf.fit(xinp, yinp)
 #    svr_spline.fit(splKernel, yinp)
 #
