@@ -19,7 +19,7 @@ from cvxopt.base import matrix
 convThreshold = 0.001
 alphaThreshold = 1000000000
 relAlphaVal = 100
-relAlphaValNoise = 150
+relAlphaValNoisa = 150
 BASIS = 'gaussian'
 R = 4
 
@@ -113,12 +113,17 @@ def predictRVM(xtest, xinp, muMat):
             xkernel[j+1] = kernel(xtest[i], xinp[j], BASIS)
         yest[i] =  np.dot(np.transpose(muMat),xkernel)
 
-    print yest.shape
-    plt.scatter(xtest, yest, marker = '^', s = 70, c='yellow')
-    print 'lol'
+#    print yest.shape
+    print xtest.shape
+    plt.scatter(xtest, yest, marker = '.', s = 70, c='yellow',label='Estimated function')
+#    plt.plot(xtest, yest, c='red', label='Estimated function')
+#    print 'lol'
 #    exit()
-    plt.savefig('rvm-sinc-uniform-1.png')
-    # plt.show()
+
+    # plt.savefig('rvm-sinc-0noise-estimate.png')
+ #   plt.legend(['True function','Relevance vectors','Training data','Estimated function','w'])
+    plt.legend()
+    plt.show()
 
     return yest
 
@@ -138,25 +143,34 @@ def rvmtrain(xinp, yinp, beta = 100):
     idx =  np.ones(len(alphas)) == 1
     mMat = np.zeros(len(alphas))
     iterationCount = 0
-    for t in range(1200):
+
+    for t in range(5000):
         iterationCount = iterationCount + 1
         idx = np.abs(newAlphas) < alphaThreshold
         idx = np.squeeze(idx)
-        print "shape of dmat " + str(dmat.shape) 
-        print "shape of idx " + str(idx.shape)
-        print "Number of true idx: " +str(sum(idx))
+#        print "shape of dmat " + str(dmat.shape) 
+#        print "shape of mMat " + str(mMat.shape) 
+#        print "shape of idx " + str(idx.shape)
+#        print "Number of true idx: " +str(sum(idx))
         
         sig = Amat[idx][:,idx] + beta * np.dot(dmat[:,idx].transpose(), dmat[:,idx])
         sigMat = np.linalg.inv(sig)
         mMat[idx] = beta * np.dot(sigMat, np.dot(dmat[:,idx].transpose(), target))
                 
         oldAlphas = np.copy(newAlphas)
-        newAlphas[idx] = np.transpose( ( 1 - np.transpose(newAlphas[idx]) * np.diag(sigMat) ) / np.array(map(float,mMat[idx]**2)) )
-        
-#        for i in range(len(newAlphas)):
-#            print "{0} : {1}".format(newAlphas[i],oldAlphas[i])
+
+        gamma = 1 - np.transpose(newAlphas[idx]) * np.diag(sigMat)
+        newAlphas[idx] = np.transpose( gamma / np.array(map(float,mMat[idx]**2)) )
+
+#        print "shape of dmat " + str(dmat.shape) 
+#        print "shape of mMat " + str(mMat.shape) 
+#        print "shape of idx " + str(idx.shape)
+#        print mMat[idx]
+#        print "Number of true idx: " +str(sum(idx))
+        beta = ( N - np.sum(gamma) ) / np.linalg.norm( yinp - np.dot(dmat[:,idx], mMat[idx]) )
+
         delta = sum(np.abs(newAlphas - oldAlphas))
-        print delta
+#        print delta
         if (delta < convThreshold):
             print "\n\n\n\n\n!!!!!CONVERGED!!!!!\n\n\n\n\n"
             converged = True
@@ -180,15 +194,21 @@ def rvmtrain(xinp, yinp, beta = 100):
 #    print relevant_vecs_ind
     print "number of relevancevectors (alpha < {0}): ".format(relAlphaVal) + str(len(relevant_vecs_ind))
 #    print x_rel
-#    print y_rel
+#    print y_rel   
+    
     plt.ylim((-0.4, 1.2))
     plt.xlim((-11, 11))
-    plt.scatter(zip(*x_rel), y_rel, marker = 'o', c='r', s=70)
-    plt.plot(xinp, yinp, marker = '^', c= 'b')
+
+    plt.scatter(zip(*x_rel), y_rel, marker = 'o', c='r', s=70, label='Relevance vectors')
+#    plt.scatter(xinp, yinp,  c= 'b', marker='.', label='Training data')
+    plt.plot(xinp, yinp,  c= 'b', marker='^', label='Training data')
 
     #plt.show()
     # exit()
     muMat = mMat
+    #print newAlphas
+    print "beta: " + str(beta)
+    
     return muMat, converged
 
 
@@ -201,8 +221,9 @@ def svmtrain(xinp, yinp):
 
 def main():
 #    plt.figure()
-    xinp, yinp, yact = generateData(noise = 1, N = 100)
-    # xrand, yrand, yorig = generateData(noise = 0, N = 100)
+
+    xinp, yinp, yact = generateData(noise = 2)
+
 #    splKernel = splineKernel(xinp)
 #    svr_rbf  = svm.SVR(C = 1, epsilon = 0.01, kernel = 'rbf')
 #    svr_spline  = svm.SVR(C = 10, epsilon = 0.02, kernel = 'precomputed')
@@ -210,20 +231,27 @@ def main():
 #    yinp = list(yinp)
 #    print splKernel.shape
     xtest, ytestnoise, ytestact  = generateData(noise = 0, N = 1000)
-    plt.plot(xtest, ytestact, marker='+', c='g')
+
+    
+    plt.plot(xtest, ytestact, marker='+', c='g',label='True function')
+
     beta = 100
     # print yinp.shape
     # exit()
     muMat, converged = rvmtrain(xinp, yinp, beta)
-    print muMat
+    print muMat.shape
+    # print muMat
     # y_rvm_est = predictRVM(xinp, xinp, muMat)
+    print xtest.shape
+    print 'blabla'
     y_rvm_est = predictRVM(xinp, xinp, muMat)
 
     err_rvm = rmse(yact, y_rvm_est)
     # err_rvm_2 = rmse()
     print 'rvm error'
     print err_rvm
-    # plt.plot(xtest, yact, marker = '+', c='g')
+#    plt.plot(xtest, yact, c='k', label='True function')
+    plt.legend()
 #    svr_rbf.fit(xinp, yinp)
 #    svr_spline.fit(splKernel, yinp)
 #
