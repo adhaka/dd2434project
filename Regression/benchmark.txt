@@ -1,0 +1,16 @@
+
+
+DataSet			N	D	SVM	RVM	SVM	RVM
+Sinc(Gaussian)		100	1	0.245		49	
+Sinc(Uniform)		100	1 	0.310		52
+FriedMan1		240	10	2.45		101
+FriedMan2		240	4	3910		108
+
+
+
+
+
+The data sets used are given on the top, sinc = sinx/x. Two types of noise was used, gaussian and uniform noise.
+The gaussian noise had a variance = 0.1, and the uniform noise had an interval of [-0.1, 0.1] as used in the original
+Tipping paper. 
+
