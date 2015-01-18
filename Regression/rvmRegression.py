@@ -2,7 +2,7 @@
 """
 Created on Wed Jan  7 16:08:17 2015
 
-@author: magnus
+@author: magnus and akash
 """
 
 
