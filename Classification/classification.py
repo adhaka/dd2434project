@@ -1,5 +1,4 @@
 """classification.py: Implements a relevance vector machine."""
-__author__      = "David Huebner"
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +6,8 @@ import math
 import pdb # for debugging
 
 def main():
-
-    raetschDataset = True # when true one of hte Raetsch datasets (Banana, titanic, etc) is to be classified, false otherwise
+    ## By Foteini Beligianni and David Huebner
+    raetschDataset = False # when true one of hte Raetsch datasets (Banana, titanic, etc) is to be classified, false otherwise
 
     # Train RVM. We have to choose the hyper-parameter r depending on the data_set
     # for Ripley, take r = 0.5
@@ -16,7 +15,7 @@ def main():
     # for Breast Cancer, take r = 4
     # for Titanic, take r = 4
     # for German, take r = 10
-    r = 4
+    r = 0.5
 
     if raetschDataset:
         #-------------------------------------------------------------------------------------------------------------------
@@ -69,8 +68,8 @@ def main():
         #-------------------------------------------------------------------------------------------------------------------
 
     else:
-        #data_train, x, t, x_test, t_test = loadRipleysData()
-        x, t, x_test, t_test = loadPimaData()
+        data_train, x, t, x_test, t_test = loadRipleysData()
+        #x, t, x_test, t_test = loadPimaData()
         weights, indices = rvm(x,t,r)
 
         ## Build Test Phi
@@ -88,17 +87,14 @@ def main():
         print("#RVMs on test data with N=" +str(N)+" data points is: "+str(K))
 
 
-    '''
+    ##### Plotting
     # Plot Points
     pos_examples = np.array([data[0:len(x[0]-1)] for data in data_train if int(data[len(x[0]-1)]) == 0])
     neg_examples = np.array([data[0:len(x[0]-1)] for data in data_train if int(data[len(x[0]-1)]) == 1])
-    #pos_examples = np.array([x[i] for i in range(0,len(t)) if t[i] == 'No'])
-    #neg_examples = np.array([x[i] for i in range(0,len(t)) if t[i] == 'Yes'])
     plt.plot (pos_examples[:,0], pos_examples[:,1], 'rx')
     plt.plot (neg_examples[:,0], neg_examples[:,1], 'bo')
     plt.scatter (x[indices,0],x[indices,1],s=100, facecolors='none', edgecolors='r')
     plt.show(block = False)
-
     # Plot the decision boundary
     # Generate the mesh
     steps = 50
@@ -117,11 +113,20 @@ def main():
     # apply sigmoid for probabilites
     p_grid = sigmoid(y_grid)
     p_grid = p_grid.reshape(xx.shape)
-    plt.contour(xx,yy,p_grid,levels=[0.25,0.5,0.75],linewidths=2,colors=['green', 'black', 'green'],linestyles=['dashed','solid','dashed'])
-    plt.title("Classifcation by using a relevance vector machine")
-    plt.text(-1.1,-0.1,"Classification rate: "+str(classification_rate))
+    CS = plt.contour(xx,yy,p_grid,levels=[0.25,0.5,0.75],linewidths=2,labels=["p=0.25","p=0.5","p=0.75"], colors=['green', 'black', 'green'],linestyles=['dashed','solid','dashed'])
+    #### Colormesh to show classification probabilities
+    #plt.pcolormesh(xx, yy, p_grid,cmap = plt.get_cmap('bwr_r'))
+    #plt.colorbar()
+    labels = ['p=0.25', 'p=0.5','p=0.75']
+    for i in range(len(labels)):
+        CS.collections[i].set_label(labels[i])
+    plt.legend(loc='upper left')
+    plt.show(block = False)
+    plt.title("RVM Classification")
+    plt.xlim([xx.min(),xx.max()])
+    plt.ylim([yy.min(),yy.max()])
     plt.show()#(block = False)
-    '''
+    
     
 def buildPhi(r,x1,x2):
     N = len(x1)
@@ -132,7 +137,9 @@ def buildPhi(r,x1,x2):
             Phi[m,n] = gaussianKernel(r,x1[m],x2[n])
     return(Phi)
 
-def rvm(x,t,r):  # x = data, t = labels, r = hyperparameter for gaussian kernel
+def rvm(x,t,r):
+    ## By David Huebner
+    # x = data, t = labels, r = hyperparameter for gaussian kernel
     # The Core of the algorithm. It consists of two nested loops.
     
     # The outer loop is adjusting the hyperparameter alpha and determines which indices are used.
@@ -310,6 +317,7 @@ def loadRipleysData():
 
 ## load Pima data
 def loadPimaData():
+    ## By Foteini Beligianni
     #-----------------load training data--------------------------
     f = open('datasets/pima.tr')
     f.readline() # skip first line
@@ -337,6 +345,7 @@ def loadPimaData():
 
 ## load data
 def loadData(test_file,test_labels,train_file,train_labels):
+    ## By Foteini Beligianni
     x = np.loadtxt(train_file)
     t_temp = np.loadtxt(train_labels)
     t = [(0,1)[d==1] for d in t_temp] # convert 1, -1 to 1 and 0 correspondingly
@@ -349,9 +358,3 @@ def loadData(test_file,test_labels,train_file,train_labels):
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
