@@ -1,10 +1,10 @@
 
 
-DataSet			N	D	SVM	RVM	SVM	RVM
-Sinc(Gaussian)		100	1	0.245		49	
-Sinc(Uniform)		100	1 	0.310		52
-FriedMan1		240	10	2.45		101
-FriedMan2		240	4	3910		108
+DataSet					N	D	SVM	RVM	SVM	RVM
+Sinc(Uniform )				100	1 	0.310	0.291	52	6
+Sinc(Gaussian sig = 0.1)		100	1	0.285	0.23	49	5
+Sinc(Gaussian sig = 0.3)		100	1	0.91	0.84	71	6
+
 
 
 

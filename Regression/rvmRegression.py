@@ -25,15 +25,8 @@ R = 4
 
 def generateData(noise = 0, N = 100):
     xini = np.linspace(-10, 10, N)
+    xinp = np.array(map(lambda x: [x], xini))
     yact = (1/abs(xini)) * np.sin(np.abs(xini))
-
-    temp = np.random.rand(N,1)
-    for i in range(len(xini)):
-        temp[i,0] = xini[i]
-
-    # print temp
-    # xinp = map(lambda x:np.ones(x), xini)
-    xinp = temp
 
     ynoise = yact
     # xinp = xini.reshape(1,100)
@@ -50,7 +43,7 @@ def noisify(yinp, type='uniform'):
     if type == 'uniform':
         noise = np.random.uniform(-0.2, 0.2, len(yinp))
     if type == 'gaussian':
-        noise = np.random.normal(0, 0.1, len(yinp))
+        noise = np.random.normal(0, 0.3, len(yinp))
     finp = finp + noise
     return finp
 
@@ -83,16 +76,13 @@ def splineKernel(x):
     kerMat = np.ones((len(x), len(x)))
     for i in range(len(x)):
         for j in range(len(x)):
-            # kerMat[i,j] = sum([p*q + 1 + p*q*min(p,q) - (float(p+q)/2) * float(min(p,q)) ** 2 + float(min(p,q) ** 3)/3 for p,q in zip(x[i], x[j])])
-            # kerMat[i,j] = reduce(lambda x,y: x*y, [p*q + 1 + p*q*min(p,q) - (float(p+q)/2) * float(min(p,q)) ** 2 + float(min(p,q) ** 3)/3 for p,q in zip(x[i], x[j])])
-            # kerMat[i,j] = reduce(lambda x,y: x*y, [p*q + 1 + p*q*min(p,q) - (float(p+q)/2) * (float(min(p,q)) ** 2 + (min(p,q) ** 3)/3)  for p,q in zip(x[i], x[j])] )
             kerMat[i,j] = reduce(lambda x,y: x*y, [p*q + 1 + min(p,q)  for p,q in zip(x[i], x[j])] )
             # kerMat[i,j] = (sum([p*q  for p,q in zip(x[i], x[j])]) + 1) ** 2
     print kerMat
     return kerMat
     
-def tuneSVMparams():
-    pass
+
+
 
 def getDesMat(xinp, eta = None):
     desMat = np.ones((len(xinp), len(xinp) + 1))
@@ -116,7 +106,6 @@ def predictRVM(xtest, xinp, muMat, idx):
         
         yest[i] =  np.dot(np.transpose(muMat[idx]), xkernel[idx])
     plt.legend()
-    plt.show()
 
     return yest
 
@@ -180,102 +169,48 @@ def rvmtrain(xinp, yinp, beta = 100):
     return muMat, beta, converged, idx, x_rel, y_rel
 
 
-def svmtrain(xinp, yinp):
-
-
-    pass
-
-
 def main():
-#    plt.figure()
 
-    xinp, yinp, yact = generateData(noise = 2,N=100)    
+    xinp, yinp, yact = generateData(noise =2 ,N=100)
     xtest, ytestnoise, ytestact  = generateData(noise = 0, N = 1000)
     beta = 100
     muMat, beta, converged, idx, x_rel, y_rel = rvmtrain(xinp, yinp, beta)
-
     x = xinp
     y = yact
     y_rvm_est = predictRVM(x, xinp, muMat, idx)
 
     err_rvm = rmse(y, y_rvm_est)
-    
+
     print 'rvm error'
     print err_rvm
 #    plt.plot(xtest, yact, c='k', label='True function')
-#    plot    
+#    plot
     plt.ylim((-0.4, 1.2))
     plt.xlim((-11, 11))
 
     plt.scatter(x_rel, y_rel, marker = 'o', c='r', s=70, label='Relevance vectors')
-#    plt.scatter(xinp, yinp,  c= 'b', marker='.', label='Training data')
     plt.plot(xinp, yinp,  c= 'b', marker='^', label='Training data')
     plt.plot(xtest, ytestact, marker='+', c='g',label='True function')
     plt.scatter(x, y_rvm_est, marker = '.', s = 70, c='yellow',label='Estimated function')
 
     plt.legend()
-#    title = 'RVM, No noise'
-#    title = 'RVM, uniform noise [-0.2,0.2]'
     title = 'RVM, gaussian noise $\sigma$ = 0.1'
     plt.title(title)
-    
-    
-#    ds = DataSets()
-#    x, y = ds.genFriedman(i=2,N=240,D=4)
-#    x, y = ds.genFriedman(i=1,N=240,D=10)    
-##    xtest, ytestnoise, ytestact  = generateData(noise = 0, N = 1000)
-#    R=100 
-#    beta = 100    
-#    muMat, beta, converged, idx, x_rel, y_rel = rvmtrain(x[:,0], y, beta)
-#
-#    x = xinp
-#    y = yact
-#    y_rvm_est = predictRVM(x, xinp, muMat, idx)
-#
-#    err_rvm = rmse(y, y_rvm_est)
-#    
-#    print 'rvm error'
-#    print err_rvm
-    
-    
-#    plt.savefig('rvm-sinc-gaussian01-noise.png')
-#    print sum(alphas<alphaThreshold)
-#    svr_rbf.fit(xinp, yinp)
+
+    ds = DataSets()
+    # x, y = ds.genFriedman(i=2,N=240,D=4)
+    x, y = ds.genFriedman(i=1,N=240,D=10)
+
+    svr_rbf  = svm.SVR(C = 10, epsilon = 0.03, kernel = 'rbf', gamma = 10)
+    svr_rbf.fit(x, y)
 #    svr_spline.fit(splKernel, yinp)
-#
-#    # x_min, x_max = xinp[:].min() - 1, xinp[:].max() + 1
-#    # y_min, y_max = yinp[:].min() - 1, xinp[:].max() + 1
-#    # xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-#    # Z = svr_rbf.predict(np.c_[xx.ravel(), yy.ravel()])
-#
-#
-#    # Z = Z.reshape(xx.shape)
-#    # plt.pcolormesh(xx, yy, Z, cmap=plt.cm.Paired)
-#    yest = svr_rbf.predict(xinp)
+
+
+    yest = svr_rbf.predict(x)
 #    yspest = svr_spline.predict(splKernel)
-#    err_rbf = rmse(yinp, yest)
-#    err_spline = rmse(yinp, yspest)
-#    # rvm1 = rvmtrain(xinp, yinp)
-#
-#    print err_rbf
-#    print err_spline
-#
-#    plt.ylim((-0.4, 1.2))
-#    plt.xlim((-11, 11))
-#    print svr_rbf
-#    print svr_rbf.support_
-#    xinp_support = [xinp[i] for i in svr_rbf.support_]
-#    yinp_support = [yinp[i] for i in svr_rbf.support_]
-#    print yinp_support
-#    print xinp_support
-#    # print x
-#    print len(svr_rbf.support_vectors_)
-#    plt.scatter(xinp_support, yinp_support, marker = 'o', c='r', alpha=1, s=60)
-#    plt.plot(xinp, yinp, marker = '^', c= 'b')
-#    # plt.plot(xinp, yest, marker = '^', c= 'r')
-#    # plt.plot(xinp, yspest, marker = '^', c= 'r')
-#    # plt.plot()
-#    plt.show()
+
+    plt.plot()
+    plt.show()
 #    # plt.savefig('svm-rbf2.png')
 
 
